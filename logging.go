@@ -1,6 +1,6 @@
 package quicklog
 
-var logger = New("/logs", Config{
+var logger = New("./logs/", Config{
 	Level:       LEVEL_DEBUG,
 	TraceSkip:   2,
 	ArchiveLogs: true,
