@@ -94,9 +94,9 @@ func New(logDir string, config ...Config) *Logger {
 
 func (logger *Logger) updateFormat() {
 	if len(logger.config.Title) > 0 {
-		logger.format = "[%[0]s; %[1]s] {%[2]s} %[3]s\n"
+		logger.format = "[%[1]s; %[2]s] {%[3]s} %[4]s\n"
 	} else {
-		logger.format = "[%[0]s; %[1]s] %[3]s\n"
+		logger.format = "[%[1]s; %[2]s] %[4]s\n"
 	}
 }
 
