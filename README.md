@@ -6,7 +6,7 @@ Quick Log is a small logging that package supports logging levels, log archiving
 
 After initializing your go module, run:
 
-```go get -u github.com/I-Am-Dench/quick-log```
+```go get -u github.com/I-Am-Dench/quick-log/v2```
 
 ## Log Archiving
 
@@ -64,7 +64,9 @@ func main() {
     logger1 := log.New("./dir1/logs/")
     defer logger1.Close()
 
-    logger2 := log.New("./dir2/logs/")
+    logger2 := log.New("./dir2/logs/", log.Config{
+        Label: "LOGGER2",
+    })
     defer logger2.Close()
     logger2.SetLevel(log.LEVEL_INFO)
 
@@ -81,7 +83,7 @@ func main() {
 ~~~
 [D; 1970-01-01; 00:00:00] Logger1 - Debug
 [I; 1970-01-01; 00:00:00] Logger1 - Info
-[I; 1970-01-01; 00:00:00] Logger2 - Info
+[I; 1970-01-01; 00:00:00] {LOGGER 2} Logger2 - Info
 ~~~
 
 Loggers, by default, have a log level of log.LEVEL_DEBUG.
