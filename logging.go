@@ -1,9 +1,10 @@
 package quicklog
 
 var logger = New("./logs/", Config{
-	Level:       LEVEL_DEBUG,
-	TraceSkip:   2,
-	ArchiveLogs: true,
+	Level:        LEVEL_DEBUG,
+	TraceSkip:    2,
+	WriteLogFile: true,
+	ArchiveLogs:  true,
 })
 
 func SetDir(logDir string) {
@@ -22,8 +23,12 @@ func DoesLogArchives() bool {
 	return logger.DoesLogArchives()
 }
 
-func SetArchiveLogs(archiveLogs bool) {
-	logger.SetArchiveLogs(archiveLogs)
+func ArchiveLogs(archiveLogs bool) {
+	logger.ArchiveLogs(archiveLogs)
+}
+
+func WriteLogFile(writeLog bool) {
+	logger.WriteLogFile(writeLog)
 }
 
 func Debugf(format string, a ...any) {
@@ -46,8 +51,16 @@ func Errorf(format string, a ...any) {
 	logger.Errorf(format, a...)
 }
 
+func Error(err error) {
+	logger.Error(err)
+}
+
 func Fatalf(format string, a ...any) {
 	logger.Fatalf(format, a...)
+}
+
+func FatalErr(err error) {
+	logger.FatalErr(err)
 }
 
 func Close() {

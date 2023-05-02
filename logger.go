@@ -41,12 +41,19 @@ func (file *openedFile) Close() {
 const timestampFormat = "2006-01-02; 15:04:05"
 
 type Config struct {
+	// If the len(Title) > 0, the title will be prepended before message content
+	Title string
+
 	// Lowest log level that can be handled
 	Level LogLevel
 
 	// The number of callstack frames to skip. This would be the argument passed to runtime.Caller(skip int)
 	// By default, this is 1 such that the Trace will log where the statement was executed
 	TraceSkip int
+
+	// Enables/disabled writing the current log to a file. The contents of the log file is overwritten
+	// during the first Logger.Write(). If ArchiveLogs is true, this option is ignored
+	WriteLogFile bool
 
 	// Enables/disables log archiving
 	ArchiveLogs bool
@@ -56,9 +63,13 @@ type Config struct {
 }
 
 type Logger struct {
+	io.Writer
+
 	dir         string
 	logFilePath string
 	logFile     openedFile
+
+	format string
 
 	config Config
 }
@@ -77,7 +88,16 @@ func New(logDir string, config ...Config) *Logger {
 		}
 	}
 
+	logger.updateFormat()
 	return logger
+}
+
+func (logger *Logger) updateFormat() {
+	if len(logger.config.Title) > 0 {
+		logger.format = "[%[0]s; %[1]s] {%[2]s} %[3]s\n"
+	} else {
+		logger.format = "[%[0]s; %[1]s] %[3]s\n"
+	}
 }
 
 func (logger *Logger) Close() {
@@ -127,8 +147,19 @@ func (logger *Logger) DoesLogArchives() bool {
 	return logger.config.ArchiveLogs
 }
 
-func (logger *Logger) SetArchiveLogs(archiveLogs bool) {
+func (logger *Logger) ArchiveLogs(archiveLogs bool) {
 	logger.config.ArchiveLogs = archiveLogs
+}
+
+func (logger *Logger) WriteLogFile(writeLog bool) {
+	logger.config.WriteLogFile = writeLog
+}
+
+func (logger *Logger) File() *os.File {
+	if logger.config.File == nil {
+		return os.Stdout
+	}
+	return logger.config.File
 }
 
 func (logger *Logger) ArchiveCurrentLog() error {
@@ -164,55 +195,83 @@ func (logger *Logger) ArchiveCurrentLog() error {
 	return err
 }
 
-func (logger *Logger) Write(writer io.Writer, message string, level LogLevel) {
-	timestamp := time.Now().Format(timestampFormat)
-	m := fmt.Sprint("[", LOG_PREFIX[level], "; ", timestamp, "] ", message, "\n")
-	writer.Write([]byte(m))
+func join(errs ...error) error {
+	for _, err := range errs {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (logger *Logger) Write(p []byte) (n int, err error) {
+	var aErr, bErr error
+	n, aErr = logger.File().Write(p)
+
+	if !logger.config.WriteLogFile && !logger.config.ArchiveLogs {
+		return n, aErr
+	}
 
 	if !logger.logFile.IsOK() {
 		logger.logFile = logger.openLogFile()
 	}
 
 	if logger.logFile.IsToday() {
-		logger.logFile.File().Write([]byte(m))
+		_, bErr = logger.logFile.File().Write(p)
 	} else {
 		logger.ArchiveCurrentLog()
 		logger.logFile.Close()
 		logger.logFile = logger.openLogFile()
 	}
+
+	return n, join(aErr, bErr)
 }
 
-func (logger *Logger) Logf(writer io.Writer, level LogLevel, format string, a ...any) {
+func (logger *Logger) WriteLog(message string, level LogLevel) {
+	timestamp := time.Now().Format(timestampFormat)
+	fmt.Fprintf(logger, logger.format, LOG_PREFIX[level], timestamp, logger.config.Title, message)
+}
+
+func (logger *Logger) Logf(level LogLevel, format string, a ...any) {
 	if level < logger.config.Level {
 		return
 	}
 
-	logger.Write(writer, fmt.Sprintf(format, a...), level)
+	logger.WriteLog(fmt.Sprintf(format, a...), level)
 }
 
 func (logger *Logger) Debugf(format string, a ...any) {
-	logger.Logf(os.Stdout, LEVEL_DEBUG, format, a...)
+	logger.Logf(LEVEL_DEBUG, format, a...)
 }
 
 func (logger *Logger) Tracef(format string, a ...any) {
 	_, filename, line, _ := runtime.Caller(logger.config.TraceSkip)
 	traceMessage := fmt.Sprintf("[%s:%d]", filename, line)
-	logger.Logf(os.Stdout, LEVEL_TRACE, fmt.Sprint(traceMessage, " ", format), a...)
+	logger.Logf(LEVEL_TRACE, fmt.Sprint(traceMessage, " ", format), a...)
 }
 
 func (logger *Logger) Infof(format string, a ...any) {
-	logger.Logf(os.Stdout, LEVEL_INFO, format, a...)
+	logger.Logf(LEVEL_INFO, format, a...)
 }
 
 func (logger *Logger) Warnf(format string, a ...any) {
-	logger.Logf(os.Stdout, LEVEL_WARN, format, a...)
+	logger.Logf(LEVEL_WARN, format, a...)
 }
 
 func (logger *Logger) Errorf(format string, a ...any) {
-	logger.Logf(os.Stdout, LEVEL_ERROR, format, a...)
+	logger.Logf(LEVEL_ERROR, format, a...)
+}
+
+func (logger *Logger) Error(err error) {
+	logger.Logf(LEVEL_ERROR, err.Error())
 }
 
 func (logger *Logger) Fatalf(format string, a ...any) {
-	logger.Logf(os.Stdout, LEVEL_FATAL, format, a...)
+	logger.Logf(LEVEL_FATAL, format, a...)
 	panic(fmt.Sprintf(format, a...))
+}
+
+func (logger *Logger) FatalErr(err error) {
+	logger.Logf(LEVEL_FATAL, err.Error())
+	panic(err)
 }
