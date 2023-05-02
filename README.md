@@ -25,7 +25,7 @@ Log archiving can be disabled by calling `Logger.SetArchiveLogs(false)`
 ~~~go
 package main
 
-import log "github.com/I-Am-Dench/quick-log"
+import log "github.com/I-Am-Dench/quick-log/v2"
 
 func main() {
     log.Debugf("Debug log")
@@ -58,7 +58,7 @@ func main() {
 ~~~go
 package main
 
-import log "github.com/I-Am-Dench/quick-log"
+import log "github.com/I-Am-Dench/quick-log/v2"
 
 func main() {
     logger1 := log.New("./dir1/logs/")
