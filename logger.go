@@ -42,7 +42,7 @@ const timestampFormat = "2006-01-02; 15:04:05"
 
 type Config struct {
 	// If the len(Title) > 0, the title will be prepended before message content
-	Title string
+	Label string
 
 	// Lowest log level that can be handled
 	Level LogLevel
@@ -93,7 +93,7 @@ func New(logDir string, config ...Config) *Logger {
 }
 
 func (logger *Logger) updateFormat() {
-	if len(logger.config.Title) > 0 {
+	if len(logger.config.Label) > 0 {
 		logger.format = "[%[1]s; %[2]s] {%[3]s} %[4]s\n"
 	} else {
 		logger.format = "[%[1]s; %[2]s] %[4]s\n"
@@ -229,7 +229,7 @@ func (logger *Logger) Write(p []byte) (n int, err error) {
 
 func (logger *Logger) WriteLog(message string, level LogLevel) {
 	timestamp := time.Now().Format(timestampFormat)
-	fmt.Fprintf(logger, logger.format, LOG_PREFIX[level], timestamp, logger.config.Title, message)
+	fmt.Fprintf(logger, logger.format, LOG_PREFIX[level], timestamp, logger.config.Label, message)
 }
 
 func (logger *Logger) Logf(level LogLevel, format string, a ...any) {
